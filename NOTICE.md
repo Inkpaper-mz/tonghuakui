@@ -17,6 +17,16 @@
 - **图片 / 音效**：`client/assets/` 为空，无第三方素材。
 - **运行时依赖**：0 个 npm 包；运行只需 Node.js（服务端）与浏览器（客户端）。
 
+## 发行包中的二进制
+
+| 发行物 | 内含 | 许可 |
+|---|---|---|
+| `tonghuakui-server-*.tar.gz` / `.zip` | 纯源码，**不含** Node 运行时（需自行安装） | MIT（本项目） |
+| `TongHuaKui-macos-*.zip` | 本项目源码 + **Node.js 运行时**（`Contents/Resources/node`） | 本项目 MIT；**Node.js 为 MIT，© Node.js contributors** |
+
+> macOS 版打包了 Node.js 官方二进制以便双击即玩，未做任何修改。
+> 其完整许可证随包保留在 `Contents/Resources/NODE-LICENSE.txt`，也可在 <https://github.com/nodejs/node/blob/main/LICENSE> 查看。
+
 ## 虚构声明
 
 - 游戏内所有股票、公司、指数、行情与新闻均为**虚构**，仅用于娱乐与教学演示，与真实证券、真实公司无关。
