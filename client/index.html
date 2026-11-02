@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>同花亏 — 商业模拟对战平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23e01f26'/%3E%3Ctext x='16' y='24' font-size='22' font-family='sans-serif' font-weight='bold' fill='%23fff' text-anchor='middle'%3E%E4%BA%8F%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/trade.css">
+<link rel="stylesheet" href="css/chart.css">
+<link rel="stylesheet" href="css/views.css">
+<link rel="stylesheet" href="css/ai.css">
+</head>
+<body data-view="login">
+
+<div id="app">
+
+  <!-- ═══════════ 标题栏 ═══════════ -->
+  <header id="titlebar">
+    <div class="brand">
+      <span class="brand-mark">亏</span>
+      <span class="brand-text">同花亏</span>
+      <span class="brand-sub">商业模拟对战平台</span>
+    </div>
+
+    <nav id="menubar" class="menubar">
+      <div class="menu-item" data-menu="system">系统<span class="mn">(S)</span>
+        <div class="menu-pop">
+          <div class="mi" data-cmd="login">重新登录<span class="k">Ctrl+L</span></div>
+          <div class="mi" data-cmd="settings">费用与规则…</div>
+          <div class="mi" data-cmd="toggle:confirm">下单二次确认<span class="k">Ctrl+Shift+C</span></div>
+          <div class="mi" data-cmd="reload">重新载入界面<span class="k">Ctrl+R</span></div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="theme">切换夜间模式<span class="k">Ctrl+D</span></div>
+          <div class="mi" data-cmd="fullscreen">全屏 / 退出全屏<span class="k">F11</span></div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="exit">退出同花亏<span class="k">Alt+F4</span></div>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="func">功能<span class="mn">(F)</span>
+        <div class="menu-pop">
+          <div class="mi" data-cmd="buy">买入…<span class="k">F1</span></div>
+          <div class="mi" data-cmd="sell">卖出…<span class="k">F2</span></div>
+          <div class="mi" data-cmd="cancel">撤单…<span class="k">F3</span></div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="tab:positions">我的持仓<span class="k">F4</span></div>
+          <div class="mi" data-cmd="tab:orders">当日委托<span class="k">F5</span></div>
+          <div class="mi" data-cmd="tab:trades">当日成交<span class="k">F6</span></div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="market:buy">全仓市价买入（当前股）</div>
+          <div class="mi" data-cmd="cancel">撤单 / 委托管理<span class="k">F3</span></div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="cancelall">全部撤单</div>
+          <div class="mi" data-cmd="flatten">一键清仓（市价）</div>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="quote">报价<span class="mn">(Q)</span>
+        <div class="menu-pop">
+          <div class="mi" data-cmd="tab:quote">行情报价表</div>
+          <div class="mi" data-cmd="tab:watch">我的自选股</div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="sort:changePct">按涨幅排序</div>
+          <div class="mi" data-cmd="sort:v">按成交量排序</div>
+          <div class="mi" data-cmd="sort:turn">按换手率排序</div>
+          <div class="mi" data-cmd="sort:speed">按涨速排序</div>
+          <div class="mi" data-cmd="sort:vr">按量比排序</div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="sort:code">按代码排序</div>
+          <div class="mi" data-cmd="reset:sort">恢复默认排序（涨幅↓）</div>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="analysis">分析<span class="mn">(A)</span>
+        <div class="menu-pop">
+          <div class="mi" data-cmd="tf:timeshare">分时图</div>
+          <div class="mi" data-cmd="tf:1m">1 分钟 K 线</div>
+          <div class="mi" data-cmd="tf:5m">5 分钟 K 线</div>
+          <div class="mi" data-cmd="tf:15m">15 分钟 K 线</div>
+          <div class="mi" data-cmd="tf:1d">日 K 线</div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="ind:ma">叠加均线 MA</div>
+          <div class="mi" data-cmd="ind:macd">MACD 副图</div>
+          <div class="mi" data-cmd="ind:vol">成交量副图</div>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="trade">交易<span class="mn">(T)</span>
+        <div class="menu-pop">
+          <div class="mi" data-cmd="tab:trade">交易下单</div>
+          <div class="mi" data-cmd="tab:positions">持仓明细</div>
+          <div class="mi" data-cmd="tab:cash">资金流水</div>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="news">资讯<span class="mn">(N)</span>
+        <div class="menu-pop">
+          <div class="mi" data-cmd="tab:news">实时快讯</div>
+          <div class="mi" data-cmd="tab:rank">实时排行</div>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="tools">工具<span class="mn">(U)</span>
+        <div class="menu-pop">
+          <div class="mi" data-cmd="calc">收益计算器…</div>
+          <div class="mi" data-cmd="stats">对局统计</div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="export:trades">导出成交记录 CSV</div>
+          <div class="mi" data-cmd="export:rank">导出本局排行 CSV</div>
+          <div class="mi" data-cmd="copy:quote">复制当前行情</div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="mockend">结束本局（演示）</div>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="help">帮助<span class="mn">(H)</span>
+        <div class="menu-pop">
+          <div class="mi" data-cmd="help:guide">新手玩法指南</div>
+          <div class="mi" data-cmd="help:rules">交易规则与费用</div>
+          <div class="mi" data-cmd="help:keys">快捷键一览</div>
+          <div class="sep"></div>
+          <div class="mi" data-cmd="help:about">关于同花亏 v1.0.0</div>
+        </div>
+      </div>
+    </nav>
+
+    <div id="global-search" class="gsearch">
+      <span class="gs-ico">🔍</span>
+      <input id="search-input" type="text" placeholder="代码 / 名称 / 拼音首字母" autocomplete="off" spellcheck="false">
+      <div id="search-pop" class="search-pop"></div>
+    </div>
+
+    <div class="win-btns">
+      <button class="wb" data-win="min" title="最小化面板">─</button>
+      <button class="wb" data-win="max" title="全屏">□</button>
+      <button class="wb wb-close" data-win="close" title="退出登录">✕</button>
+    </div>
+  </header>
+
+  <!-- ═══════════ 工具栏 ═══════════ -->
+  <div id="toolbar">
+    <div class="tb-group">
+      <button class="tb-btn tb-buy"  data-cmd="buy"><b>买入</b><i>F1</i></button>
+      <button class="tb-btn tb-sell" data-cmd="sell"><b>卖出</b><i>F2</i></button>
+      <button class="tb-btn" data-cmd="cancel"><b>撤单</b><i>F3</i></button>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-group">
+      <button class="tb-btn" data-cmd="tab:positions"><b>持仓</b><i>F4</i></button>
+      <button class="tb-btn" data-cmd="tab:orders"><b>委托</b><i>F5</i></button>
+      <button class="tb-btn" data-cmd="tab:trades"><b>成交</b><i>F6</i></button>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-group">
+      <button class="tb-btn" data-cmd="tf:timeshare"><b>分时</b></button>
+      <button class="tb-btn" data-cmd="tf:1m"><b>1分</b></button>
+      <button class="tb-btn" data-cmd="tf:5m"><b>5分</b></button>
+      <button class="tb-btn" data-cmd="tf:1d"><b>日K</b></button>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-group">
+      <button class="tb-btn" data-cmd="tab:rank"><b>排行榜</b></button>
+      <button class="tb-btn" data-cmd="tab:news"><b>资讯</b></button>
+      <button class="tb-btn tb-ai" data-cmd="tab:ai"><b>✨ AI 诊股</b></button>
+      <button class="tb-btn" data-cmd="tab:lobby"><b>对战大厅</b></button>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-group">
+      <button class="tb-btn" data-cmd="cancelall"><b>全部撤单</b></button>
+      <button class="tb-btn" data-cmd="flatten"><b>一键清仓</b></button>
+    </div>
+    <div class="tb-spring"></div>
+    <div class="tb-group">
+      <button class="tb-btn" data-cmd="theme"><b>夜间</b></button>
+      <button class="tb-btn" data-cmd="settings"><b>设置</b></button>
+    </div>
+  </div>
+
+  <!-- ═══════════ 多标签页 ═══════════ -->
+  <div id="tabstrip"></div>
+
+  <!-- ═══════════ 主工作区 ═══════════ -->
+  <main id="workspace">
+    <div id="view"></div>
+  </main>
+
+  <!-- ═══════════ 状态栏 ═══════════ -->
+  <footer id="statusbar">
+    <div class="sb-item"><span id="conn-dot" class="dot dot-red"></span><span id="conn-text">未连接</span></div>
+    <div class="sb-item" id="sb-server">127.0.0.1:8899</div>
+    <div class="sb-sep"></div>
+    <div id="idx-bar" class="idx-bar"></div>
+    <div class="tb-spring"></div>
+    <div class="sb-item" id="clock">--:--:--</div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">延迟 <b id="latency">--</b> ms</div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">在线 <b id="online">0</b></div>
+    <div class="sb-sep"></div>
+    <div class="sb-item" id="me-badge">未登录</div>
+  </footer>
+
+  <div id="toast-host"></div>
+  <div id="modal-host"></div>
+  <div id="ctxmenu-host"></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

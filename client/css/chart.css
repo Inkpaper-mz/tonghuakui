@@ -1,0 +1,265 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   同花亏 · chart.css —— 图表面板组件样式
+   ───────────────────────────────────────────────────────────────────────────
+   规则：本文件只定义图表组件自有类（.chart-panel / .chart-toolbar /
+   .chart-canvas-wrap / .chart-legend 区 / .chart-ctxmenu ...）；
+   所有颜色一律引用变量（theme.css 的通用变量，或本文件定义的 --chart-*
+   装饰色变量），不写死语义色。数值一律 tabular-nums。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 图表专用装饰色（坐标轴 / 分时线 / 均价线 / MA 四色）：
+   只定义一次，浅深两套；不属于红涨绿跌语义，故独立命名空间。 */
+:root {
+  --chart-bg:      var(--panel);
+  --chart-grid:    var(--border-2);
+  --chart-line:    #3b8fd4;   /* 分时价格线（蓝） */
+  --chart-line-2:  #a8ccec;   /* 分时价格线起始端（浅蓝渐变） */
+  --chart-avg:     #e8a33d;   /* 分时均价线（黄） */
+  --chart-ma5:     #d98e12;
+  --chart-ma10:    #2f9ee0;
+  --chart-ma20:    #c94fd0;
+  --chart-ma60:    #2e9e63;
+  --chart-cursor:  #5a6470;
+  --chart-box-bg:  rgba(255, 255, 255, .95);
+}
+body.dark {
+  --chart-bg:      var(--panel);
+  --chart-grid:    var(--border-2);
+  --chart-line:    #5fa8e8;
+  --chart-line-2:  #2c4a6b;
+  --chart-avg:     #e8a33d;
+  --chart-ma5:     #e8b13c;
+  --chart-ma10:    #63b8f0;
+  --chart-ma20:    #dd77e4;
+  --chart-ma60:    #4ecb87;
+  --chart-cursor:  #aab4c2;
+  --chart-box-bg:  rgba(22, 27, 35, .94);
+}
+
+/* ═══════════ 面板外壳 ═══════════ */
+.chart-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: var(--fs);
+  user-select: none;
+}
+
+/* ═══════════ 工具条 ═══════════ */
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  flex: none;
+  padding: 0 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel-3));
+  border-bottom: 1px solid var(--border-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.chart-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding-right: 6px;
+  border-right: 1px solid var(--border-2);
+}
+.chart-name {
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  color: var(--text);
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-code {
+  color: var(--link);
+  font-variant-numeric: tabular-nums;
+}
+.chart-chip-tf {
+  padding: 0 4px;
+  line-height: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text-3);
+  font-size: 10px;
+}
+
+.chart-quote {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  flex: none;
+  padding-right: 6px;
+  border-right: 1px solid var(--border-2);
+}
+.chart-price {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.chart-chg,
+.chart-pct {
+  font-size: var(--fs);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+}
+.chart-summary .cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+}
+.chart-summary .ck { color: var(--text-3); }
+.chart-summary .cv {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.chart-spring { flex: 1 1 auto; min-width: 6px; }
+
+/* 周期按钮组（Windows 工具条按钮质感） */
+.chart-tfgroup {
+  display: inline-flex;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--panel);
+}
+.chart-tf {
+  height: 18px;
+  padding: 0 7px;
+  border: 0;
+  border-right: 1px solid var(--border-2);
+  /* 渐变与 theme.css .btn 完全一致（那里同样以字面量写死，保持一致，不引入新色） */
+  background: linear-gradient(180deg, #fdfefe, #eef1f4 60%, #e6ebf0);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+body.dark .chart-tf { background: linear-gradient(180deg, #232c38, #1c242e); }
+.chart-tf:last-child { border-right: 0; }
+.chart-tf:hover { background: var(--sel); color: var(--text); }
+.chart-tf.active {
+  background: linear-gradient(180deg, #3f7fbe, var(--accent));
+  border-right-color: var(--chrome-3);
+  color: var(--text-inv);
+  font-weight: 700;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25);
+}
+
+.chart-ibtn {
+  flex: none;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #fdfefe, #eef1f4 60%, #e6ebf0);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  cursor: pointer;
+}
+body.dark .chart-ibtn { background: linear-gradient(180deg, #232c38, #1c242e); }
+.chart-ibtn:hover { background: var(--sel); border-color: var(--border); color: var(--text); }
+.chart-ibtn:active { box-shadow: inset 0 1px 3px rgba(0, 0, 0, .22); }
+
+.chart-hint {
+  flex: none;
+  color: var(--text-3);
+  font-size: 10px;
+  cursor: default;
+}
+
+/* ═══════════ 画布 ═══════════ */
+.chart-canvas-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--chart-bg);
+}
+.chart-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+.chart-canvas:active { cursor: grabbing; }
+
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: transparent;
+}
+
+/* ═══════════ 右键菜单 ═══════════ */
+.chart-ctxmenu {
+  position: absolute;
+  z-index: 40;
+  min-width: 176px;
+  padding: 3px 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 2px 3px 8px rgba(0, 0, 0, .22);
+  color: var(--text);
+  font-size: var(--fs);
+  user-select: none;
+}
+.chart-ctxmenu .cm-row {
+  position: relative;
+  height: 21px;
+  padding: 0 22px 0 24px;
+  line-height: 21px;
+  white-space: nowrap;
+  cursor: default;
+}
+.chart-ctxmenu .cm-row:hover { background: var(--sel-strong); color: var(--text-inv); }
+.chart-ctxmenu .cm-row.chk::before {
+  content: "✔";
+  position: absolute;
+  left: 7px;
+  color: var(--accent);
+}
+.chart-ctxmenu .cm-row.chk:hover::before { color: var(--text-inv); }
+.chart-ctxmenu .cm-row.disabled { color: var(--text-3); opacity: .6; }
+.chart-ctxmenu .cm-row.disabled:hover { background: transparent; color: var(--text-3); }
+.chart-ctxmenu .cm-sep {
+  height: 1px;
+  margin: 3px 0;
+  background: var(--border-2);
+}
+
+/* ═══════════ 窄容器降级 ═══════════ */
+.chart-panel.narrow .chart-hint,
+.chart-panel.narrow .chart-summary .cell:nth-child(n+4) { display: none; }
+.chart-panel.tiny .chart-chip-tf,
+.chart-panel.tiny .chart-chg { display: none; }

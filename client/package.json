@@ -1,0 +1,6 @@
+{
+  "name": "tonghuakui-client",
+  "private": true,
+  "type": "module",
+  "description": "同花亏 客户端（纯静态 ES Module，无构建步骤）。此 package.json 仅用于让 node --check 按 ESM 解析，不引入任何依赖。"
+}

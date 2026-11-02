@@ -1,0 +1,43 @@
+# ═══════════════════════════════════════════════════════════════
+# 同花亏 · systemd 常驻服务
+#   安装：见 docs/DEPLOY-LINUX.md 第 5 步
+#   （把 /opt/tonghuakui 与 User 换成你的实际路径/账号）
+# ═══════════════════════════════════════════════════════════════
+[Unit]
+Description=TongHuaKui (同花亏) multiplayer stock game server
+Documentation=https://your-domain.com/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=thk
+Group=thk
+WorkingDirectory=/opt/tonghuakui
+
+# 只监听本机，由 nginx 对外提供 HTTPS/WSS
+Environment=THK_HOST=127.0.0.1
+Environment=THK_PORT=8899
+Environment=THK_DATA=/opt/tonghuakui/data/store.json
+Environment=NODE_ENV=production
+
+ExecStart=/usr/bin/node server/server.js
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+# 日志：journalctl -u tonghuakui -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tonghuakui
+
+# 基础加固（服务端只需要读写自己的 data 目录）
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/tonghuakui/data
+
+[Install]
+WantedBy=multi-user.target

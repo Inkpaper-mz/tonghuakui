@@ -1,0 +1,33 @@
+# ── 运行时数据（含玩家存档、管理密钥，绝不入库）──
+data/
+!data/README.txt
+*.log
+
+# ── 构建产物 ──
+dist/
+*.app
+*.dmg
+*.tar.gz
+*.zip
+
+# ── 依赖 / 缓存 ──
+node_modules/
+.pnpm-store/
+__pycache__/
+*.pyc
+
+# ── 系统垃圾 ──
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# ── 编辑器 ──
+.vscode/
+.idea/
+*.swp
+*~
+
+# ── 本地覆盖（个人配置，不入库）──
+.env
+.env.local

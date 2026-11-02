@@ -1,0 +1,204 @@
+/* ═══════════════════════════════════════════════════════════
+   同花亏 · ai.css —— AI 投资顾问面板自有样式（前缀 ai-）
+   规则：只写 AI 面板自有类；颜色一律引用 theme.css 的变量，
+        原子类（.panel/.panel-hd/.panel-bd/.tbl/.btn/.tag/.kv/.num/.up/.down/.empty/.subhd）
+        一律复用，不重复造。
+   ═══════════════════════════════════════════════════════════ */
+
+/* ───────────── 面板容器：底部标签页内滚动 ───────────── */
+.ai-pane { overflow: hidden; }
+.ai-host { height: 100%; overflow: auto; background: var(--bg); }
+
+.ai-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 4px;
+  padding: 4px;
+  align-items: start;
+}
+/* 窄屏：左右堆叠 */
+@media (max-width: 1200px) {
+  .ai-wrap { grid-template-columns: minmax(0, 1fr); }
+}
+
+.ai-card { min-width: 0; }
+.ai-card > .panel-bd { overflow: visible; }
+.ai-bd { display: flex; flex-direction: column; gap: 4px; }
+
+/* 卡片内容：默认竖排；左卡片在宽屏下用两列分区，减少滚动高度 */
+.ai-content { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ai-content-a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 3px 12px;
+  align-items: start;
+}
+.ai-sec { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ai-sec-wide { grid-column: 1 / -1; }
+@media (max-width: 900px) {
+  .ai-content-a { grid-template-columns: minmax(0, 1fr); }
+  .ai-sec-wide { grid-column: auto; }
+}
+
+.ai-hd-t { flex: none; }
+.ai-name { color: var(--text); font-size: var(--fs-lg); }
+.ai-code { font-variant-numeric: tabular-nums; }
+.ai-time { font-variant-numeric: tabular-nums; }
+.ai-refresh { height: 18px; padding: 0 6px; font-size: var(--fs-sm); }
+
+/* ───────────── 状态条 / 空态 ───────────── */
+.ai-status {
+  display: flex; align-items: center; gap: 6px;
+  min-height: 18px; padding: 1px 6px;
+  background: var(--panel-2); border: 1px solid var(--border-2);
+  color: var(--text-3); font-size: var(--fs-sm);
+}
+.ai-status.err { color: var(--warn); border-color: var(--warn); background: rgba(232,163,61,.10); }
+.ai-status-tx { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-status .btn { height: 16px; padding: 0 5px; font-size: 10px; flex: none; }
+.ai-spin {
+  flex: none; width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  animation: ai-spin 700ms linear infinite;
+}
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+
+.ai-empty { min-height: 120px; height: auto; padding: 18px 10px; }
+.ai-empty-tx { text-align: center; line-height: 1.6; }
+
+/* ───────────── ①～③ 评分环 + 结论 + 关键数据 ───────────── */
+.ai-diag {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px; align-items: center;
+  padding: 4px 2px;
+}
+.ai-ring {
+  --ai-ring-c: var(--warn);
+  position: relative; flex: none;
+  width: 92px; height: 92px; border-radius: 50%;
+  background: conic-gradient(var(--ai-ring-c) calc(var(--ai-score, 0) * 1%), var(--panel-3) 0);
+  display: flex; align-items: center; justify-content: center;
+}
+.ai-ring::after {
+  content: ''; position: absolute; inset: 7px; border-radius: 50%;
+  background: var(--panel); border: 1px solid var(--border-2);
+}
+.ai-ring.buy  { --ai-ring-c: var(--up); }
+.ai-ring.hold { --ai-ring-c: var(--warn); }
+.ai-ring.weak { --ai-ring-c: var(--down); }
+.ai-ring-in { position: relative; z-index: 1; text-align: center; line-height: 1.15; }
+.ai-ring-num {
+  font-size: 22px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.ai-ring-rating { font-size: var(--fs-sm); color: var(--text-2); }
+
+.ai-diag-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ai-summary {
+  font-size: 13px; line-height: 1.55; color: var(--text);
+  border-left: 3px solid var(--accent); padding-left: 6px;
+}
+.ai-stats { display: flex; flex-direction: column; }
+.ai-stat { height: 17px; }
+.ai-stat > .k { font-size: var(--fs-sm); }
+
+/* ───────────── ④ 六项分项评分 ───────────── */
+.ai-bks { display: flex; flex-direction: column; gap: 1px; }
+.ai-bk { display: flex; align-items: center; gap: 6px; height: 16px; }
+.ai-bk-k { width: 32px; flex: none; color: var(--text-2); }
+.ai-bar {
+  flex: 1 1 auto; min-width: 0; height: 9px;
+  background: var(--panel-3); border: 1px solid var(--border-2);
+}
+.ai-bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 180ms linear; }
+.ai-bk.hi  > .ai-bar > i { background: var(--up); }
+.ai-bk.lo  > .ai-bar > i { background: var(--down); }
+.ai-bk.mid > .ai-bar > i { background: var(--accent); }
+.ai-bk-v { width: 24px; flex: none; font-size: var(--fs-sm); color: var(--text); }
+
+/* ───────────── ⑤ 判断依据（dir 着色 + 三角） ───────────── */
+.ai-sigs { display: flex; flex-direction: column; }
+.ai-sig { display: flex; align-items: baseline; gap: 5px; height: 17px; line-height: 17px; }
+.ai-sig.hidden, .ai-risk.hidden, .ai-line.hidden, .ai-pick.hidden, .tag.hidden { display: none; }
+.ai-tri { flex: none; width: 10px; font-size: 9px; }
+.ai-sig-k { flex: none; width: 32px; color: inherit; opacity: .85; }
+.ai-sig-v { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ───────────── ⑥ 风险提示 ───────────── */
+.ai-risks { display: flex; flex-direction: column; }
+.ai-risk {
+  display: flex; align-items: baseline; gap: 5px;
+  line-height: 17px; color: var(--warn);
+}
+.ai-risk-i { flex: none; }
+.ai-risk-t { flex: 1 1 auto; min-width: 0; }
+
+/* ───────────── ⑦ 持仓建议 ───────────── */
+.ai-pos { display: flex; flex-direction: column; gap: 2px; }
+.ai-pos-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+.ai-pos-advice {
+  color: var(--text-2); line-height: 1.5;
+  background: var(--panel-2); border: 1px solid var(--border-2); padding: 2px 6px;
+}
+.ai-pos-none { height: 18px; line-height: 18px; }
+
+/* ───────────── ⑧ 操作建议 ───────────── */
+.ai-act {
+  display: flex; flex-direction: column; gap: 3px;
+  border: 1px solid var(--border); background: var(--panel-2); padding: 4px 6px;
+}
+.ai-act-text { font-size: var(--fs-xl); font-weight: 700; line-height: 1.35; }
+.ai-act-text.up   { color: var(--up); }
+.ai-act-text.down { color: var(--down); }
+.ai-act-text.hold { color: var(--warn); }
+.ai-act-line { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ai-act-row { display: flex; align-items: center; gap: 12px; }
+.ai-act-sl { color: var(--down); }
+.ai-act-tp { color: var(--up); }
+.ai-fill { margin-left: auto; height: 22px; padding: 0 10px; }
+
+/* ───────────── 右卡片：大盘观点 ───────────── */
+.ai-mood {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  border: 1px solid var(--border); background: var(--panel-2); padding: 3px 6px;
+}
+.ai-mood-text { font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+.ai-mood-text.up   { color: var(--up); }
+.ai-mood-text.down { color: var(--down); }
+.ai-mood-text.flat { color: var(--flat); }
+.ai-mood-desc { color: var(--text-2); font-size: var(--fs-sm); }
+
+.ai-mkt-summary { line-height: 1.6; color: var(--text); }
+
+.ai-breadth { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ai-bd-item { display: inline-flex; align-items: center; gap: 4px; }
+.ai-bd-item > .k { color: var(--text-3); font-size: var(--fs-sm); }
+.ai-bd-item > .v { font-weight: 700; }
+.ai-sq {
+  display: inline-block; width: 8px; height: 8px; flex: none;
+  background: var(--flat); border: 1px solid var(--border);
+}
+.ai-sq.up   { background: var(--up);   border-color: var(--up); }
+.ai-sq.down { background: var(--down); border-color: var(--down); }
+
+.ai-lines { display: flex; flex-direction: column; }
+.ai-line { display: flex; align-items: baseline; gap: 5px; line-height: 18px; color: var(--text-2); }
+.ai-line-i { flex: none; color: var(--accent); }
+.ai-line-t { flex: 1 1 auto; min-width: 0; }
+
+.ai-sectors { display: flex; flex-wrap: wrap; gap: 3px; }
+.ai-sectors .tag { height: 18px; }
+
+/* ───────────── AI 关注标的 ───────────── */
+.ai-picks-box { border: 1px solid var(--border-2); }
+.ai-picks { width: 100%; table-layout: fixed; }
+.ai-picks thead th { height: 20px; cursor: default; }
+.ai-picks thead th:nth-child(1) { width: 78px; text-align: left; }
+.ai-picks thead th:nth-child(2) { width: 62px; text-align: center; }
+.ai-picks thead th:nth-child(3) { width: 62px; }
+.ai-picks thead th:nth-child(4) { width: 66px; }
+.ai-picks thead th:nth-child(5) { width: 46px; }
+.ai-picks thead th:nth-child(6) { text-align: left; }
+.ai-pick { cursor: pointer; }
+.ai-pick > td { height: 20px; }
+.ai-pick .code, .ai-picks td:nth-child(2) { color: var(--link); }

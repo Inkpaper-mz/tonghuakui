@@ -1,0 +1,254 @@
+/* ═══════════════════════════════════════════════════════════
+   同花亏 · trade.css —— 交易主界面自有样式（前缀 tr-）
+   规则：只定义交易页自有类；颜色/尺寸一律引用 theme.css 变量，
+        不重复定义 theme.css 里的原子类（.panel/.tbl/.btn/.input/...）
+   ═══════════════════════════════════════════════════════════ */
+
+/* ───────────── 页面骨架：三栏 + 底部 ───────────── */
+.tr-root {
+  display: flex; flex-direction: column;
+  height: 100%; min-height: 0;
+  background: var(--bg);
+}
+.tr-main { display: flex; flex: 1 1 auto; min-height: 0; }
+
+.tr-left   { width: 320px; flex: none; min-width: 0; }
+.tr-center { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.tr-chart  { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.tr-chart > .panel { flex: 1 1 auto; min-height: 0; }
+
+.tr-right { width: 320px; flex: none; min-width: 0;
+  display: flex; flex-direction: column; gap: 3px;
+  overflow-x: hidden; overflow-y: auto; }   /* 竖向不够时可滚动，绝不裁掉内容 */
+.tr-depth { flex: 1 1 auto; min-height: 280px; display: flex; flex-direction: column; gap: 3px; }
+/* min-height 是硬下限：不给的话空间不足时五档盘口会被压到几十像素、内容溢出压到下单面板上。
+   低于下限时改为 .tr-right 整体滚动（它已有 overflow-y:auto），保证永不重叠。 */
+.tr-form-host { flex: none; min-height: 0; }
+
+.tr-bottom { height: 240px; flex: none; min-height: 24px; }
+.tr-bottom.collapsed { height: 24px !important; }
+.tr-bottom.collapsed > .panel-bd { display: none; }
+
+/* 窄屏（次要响应式）：压缩两侧栏宽度 */
+@media (max-width: 1180px) {
+  .tr-left  { width: 220px; }
+  .tr-right { width: 272px; }
+}
+
+/* ───────────── 行情报价表（quote-list） ───────────── */
+.tr-qtools {
+  flex: none; display: flex; align-items: center; gap: 4px;
+  padding: 3px 4px;
+  background: var(--panel-2); border-bottom: 1px solid var(--border-2);
+}
+.tr-qtools .input { flex: 1 1 auto; min-width: 0; }
+.tr-qtools .select { flex: none; width: 88px; }
+.tr-count { font-size: var(--fs-sm); white-space: nowrap; }
+.tr-qwrap { overflow: auto; }
+.tr-qtable { table-layout: fixed; }
+.tr-qtable thead th.l { text-align: left; }
+.tr-qtable thead th.c { text-align: center; }
+.tr-qrow { cursor: pointer; }
+.tr-qtable td.tr-bold { font-weight: 700; }
+
+/* ── 横向滚动：20 列总宽 1164px，左栏只有 320px ──
+   表格自带 1164px 固定宽度，容器不足时横向滚动查看其余 15 列
+   （买价/卖价/总量/现手/涨速/换手/量比/振幅/均价/市盈/最高/最低/今开/昨收/委比）。
+   overscroll-behavior-x 防止滚到边界时把滚动传递给整页。 */
+.tr-qwrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior-x: contain;
+}
+/* 滚动条沿用 theme.css 的 Windows 细窄风格（12px、panel-2 轨道、渐变滑块），
+   这里只把颜色重声明一遍，并给夜间模式一套深色滑块，保证两种主题都清晰可见。 */
+.tr-qwrap { scrollbar-color: #a9b4c0 transparent; }
+body.dark .tr-qwrap { scrollbar-color: #4a5a6e transparent; }
+.tr-qwrap::-webkit-scrollbar { width: 12px; height: 12px; }
+.tr-qwrap::-webkit-scrollbar-track { background: var(--panel-2); border-left: 1px solid var(--border-2); }
+.tr-qwrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg,#c8d2dd,#aeb9c6);
+  border: 2px solid var(--panel-2); border-radius: 6px;
+}
+.tr-qwrap::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg,#b3bfcd,#98a5b4); }
+body.dark .tr-qwrap::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#39465a,#2c3749); }
+.tr-qwrap::-webkit-scrollbar-corner { background: var(--panel-2); }
+
+/* ── 冻结列：代码 / 名称 固定在左侧，其余列横向滚动 ──
+   列宽来自 quote-list.js 的 HEADERS（★22 / 代码56 / 名称70）；
+   表格宽度是 `各列之和 + 24`（quote-list.js 里 table.style.width = totalW + 24），
+   table-layout:fixed 会把那 24px 按比例摊回各列（实测 ★22.4 / 代码57.2 / 名称71.5），
+   所以 sticky 的 left 用「摊宽后」的累计值，冻结区才能严丝合缝不重叠。
+   表头按结构自适应：首列是「代码」→ 冻结 2 列；首列是「★ 自选」→ 冻结 3 列。
+   （body 单元格用 td.tr-star 作为锚点，无需 JS 加类。） */
+.tr-qtable thead th:nth-child(1).sortable { position: sticky; left: 0; z-index: 3; }
+.tr-qtable thead th:nth-child(1).sortable + th { position: sticky; left: 57.2px; z-index: 3; }
+.tr-qtable thead th:nth-child(1):not(.sortable) { position: sticky; left: 0; z-index: 3; }
+.tr-qtable thead th:nth-child(1):not(.sortable) + th { position: sticky; left: 22.5px; z-index: 3; }
+.tr-qtable thead th:nth-child(1):not(.sortable) + th + th { position: sticky; left: 79.7px; z-index: 3; }
+
+.tr-qtable tbody tr:not(.tr-qempty) > td:nth-child(1) { position: sticky; left: 0; z-index: 1; background: var(--panel); }
+.tr-qtable tbody tr:not(.tr-qempty) > td:nth-child(2) { position: sticky; left: 57.2px; z-index: 1; background: var(--panel); }
+.tr-qtable tbody tr:not(.tr-qempty) > td.tr-star { position: sticky; left: 0; z-index: 1; background: var(--panel); }
+.tr-qtable tbody tr:not(.tr-qempty) > td.tr-star + td { position: sticky; left: 22.5px; z-index: 1; background: var(--panel); }
+.tr-qtable tbody tr:not(.tr-qempty) > td.tr-star + td + td { position: sticky; left: 79.7px; z-index: 1; background: var(--panel); }
+
+/* 冻结区右缘分隔线 + 轻微投影（暗示「右侧还有内容，可横向滚动」） */
+.tr-qtable thead th:nth-child(1).sortable + th,
+.tr-qtable thead th:nth-child(1):not(.sortable) + th + th,
+.tr-qtable tbody tr:not(.tr-qempty) > td:nth-child(2),
+.tr-qtable tbody tr:not(.tr-qempty) > td.tr-star + td + td {
+  border-right: 1px solid var(--border);
+  box-shadow: 2px 0 4px -2px rgba(0,0,0,.35);
+}
+/* 带 ★ 列时「代码」列不是冻结区右缘，撤掉上一段误加的分隔线 */
+.tr-qtable tbody tr:not(.tr-qempty) > td.tr-star + td { border-right: 0; box-shadow: none; }
+
+/* 悬停 / 选中：冻结列必须跟着整行一起变色（权重高于 theme.css 的 .tbl 规则） */
+.tr-qtable tbody tr:hover > td:nth-child(-n+2),
+.tr-qtable tbody tr:hover > td.tr-star,
+.tr-qtable tbody tr:hover > td.tr-star + td,
+.tr-qtable tbody tr:hover > td.tr-star + td + td { background: var(--sel); }
+.tr-qtable tbody tr.sel > td:nth-child(-n+2),
+.tr-qtable tbody tr.sel > td.tr-star,
+.tr-qtable tbody tr.sel > td.tr-star + td,
+.tr-qtable tbody tr.sel > td.tr-star + td + td { background: var(--sel-strong); }
+
+/* ───────────── 图表工具条：窄容器下换行，不裁切按钮 ───────────── */
+/* chart.css 里 .chart-toolbar 是 nowrap + height:26px + overflow:hidden：
+   1024 宽时 451px 内容挤进 372px，「15分 / 日K / 右键菜单 / ⟳」被裁掉、点不到。
+   这里允许 flex 换行、高度由内容撑开 → 宽屏仍是单行（观感不变），
+   窄屏自动换到第二行，所有按钮可见可点，且工具条不吃掉画布（画布 flex:1 自动让位）。
+   选择器加 .chart-panel 提高权重，确保覆盖 chart.css 的同名规则。 */
+.chart-panel .chart-toolbar {
+  flex-wrap: wrap;
+  height: auto;
+  min-height: 26px;
+  align-content: center;
+  row-gap: 1px;
+  padding: 2px 6px;
+  overflow: visible;
+}
+
+
+/* ───────────── 五档盘口（depth） ───────────── */
+.tr-book { flex: none; }
+.tr-book .panel-bd { overflow: hidden; }
+.tr-bk-row {
+  position: relative; display: flex; align-items: center;
+  height: 16px; padding: 0 6px; overflow: hidden;
+  cursor: pointer; font-size: var(--fs);
+}
+.tr-bk-row:hover { background: var(--sel); }
+.tr-bk-bar {
+  position: absolute; top: 1px; bottom: 1px; right: 0;
+  z-index: 0; pointer-events: none;
+}
+.tr-bk-row.lv-ask .tr-bk-bar { background: var(--down-bg); }
+.tr-bk-row.lv-bid .tr-bk-bar { background: var(--up-bg); }
+.tr-bk-row > .lbl,
+.tr-bk-row > .px,
+.tr-bk-row > .vol { position: relative; z-index: 1; }
+.tr-bk-row > .lbl { width: 30px; flex: none; color: var(--text-3); }
+.tr-bk-row > .px  { flex: 1 1 auto; text-align: right; font-variant-numeric: tabular-nums; }
+.tr-bk-row > .vol { width: 62px; flex: none; text-align: right;
+  color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+.tr-bk-mid {
+  display: flex; align-items: baseline; gap: 7px;
+  padding: 2px 7px 3px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2);
+}
+.tr-bk-mid .big { font-size: var(--fs-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+.tr-bk-mid .chg,
+.tr-bk-mid .pct { font-variant-numeric: tabular-nums; }
+.tr-bk-mid .avg { margin-left: auto; color: var(--text-3); font-size: var(--fs-sm); }
+
+.tr-detail { flex: 1 1 auto; min-height: 56px; }
+.tr-dtable { table-layout: fixed; }
+.tr-dtable .col-t { width: 62px; }
+
+/* ───────────── 下单面板（order-form） ───────────── */
+/* 下单区（主操作）始终完整可见；竖向空间实在不足时整列可滚动，不裁内容 */
+.tr-form { flex: none; }
+.tr-side { display: flex; flex: none; }
+.tr-side-btn {
+  flex: 1 1 0; height: 26px; cursor: pointer;
+  border: 1px solid var(--border); border-bottom: 0;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel-3));
+  color: var(--text-2); font-weight: 700;
+}
+.tr-side-btn + .tr-side-btn { border-left: 0; }
+.tr-side-btn:hover { background: linear-gradient(180deg, var(--panel), var(--panel-2)); }
+.tr-side-btn.active.buy  { background: var(--buy);  border-color: var(--buy);  color: var(--text-inv); box-shadow: var(--inset); }
+.tr-side-btn.active.sell { background: var(--sell); border-color: var(--sell); color: var(--text-inv); box-shadow: var(--inset); }
+
+.tr-form-bd { padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; overflow: auto; }
+.tr-form-funds { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.tr-fr { display: flex; align-items: center; height: 16px; font-size: var(--fs-sm); min-width: 0; }
+.tr-fr > .k { color: var(--text-3); }
+.tr-fr > .v { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.tr-field { display: flex; align-items: center; gap: 5px; }
+.tr-field > .lbl { width: 54px; flex: none; color: var(--text-2); }
+.tr-field .stepper { flex: 1 1 auto; min-width: 0; }
+.tr-field .stepper.tr-step-qty { flex: 0 0 104px; }
+.tr-field .stepper .input {
+  flex: 1 1 auto; width: 100%; min-width: 0;
+  text-align: right; padding-right: 6px;
+}
+.tr-btnrow { display: flex; gap: 6px; }
+.tr-picks, .tr-quick { display: flex; gap: 3px; flex: 1 1 0; min-width: 0; }
+.tr-picks .btn, .tr-quick .btn { flex: 1 1 0; min-width: 0; padding: 0 2px; }
+.tr-hint { margin-left: auto; font-size: var(--fs-sm); color: var(--text-3); white-space: nowrap; }
+.tr-err  { min-height: 15px; line-height: 15px; font-size: var(--fs-sm); color: var(--up); }
+.tr-submit { width: 100%; height: 30px; font-size: var(--fs-lg); }
+
+/* 二次确认弹窗内容 */
+.tr-cf { min-width: 220px; line-height: 1.8; }
+.tr-cf .kv > .v { font-weight: 700; }
+
+/* ───────────── 底部标签表格（tables） ───────────── */
+.tr-tabs { display: flex; align-items: center; gap: 2px; height: 100%; }
+.tr-tab {
+  height: 20px; padding: 0 9px; cursor: pointer;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--panel), var(--panel-3));
+  color: var(--text-2); font-size: var(--fs); white-space: nowrap;
+}
+.tr-tab:hover { background: linear-gradient(180deg, var(--panel), var(--panel-2)); }
+.tr-tab.active {
+  background: var(--panel); color: var(--accent);
+  border-color: var(--accent); font-weight: 700; box-shadow: var(--inset);
+}
+/* 夜间：--accent(#2a6bb0) 在深色面板上只有 2.98，换成亮一档的 --link ≈ 5.9 */
+body.dark .tr-tab.active { color: var(--link); }
+.tr-collapse { width: 22px; padding: 0; }
+.tr-tblwrap { position: relative; }
+.tr-pane { height: 100%; }
+.tr-pane.hidden { display: none; }
+.tr-scroll { height: 100%; overflow: auto; }
+.tr-scroll tfoot td { position: sticky; bottom: 0; z-index: 1; }
+.tr-me > td { background: var(--sel); font-weight: 700; }
+.tr-empt .empty { height: 90px; }
+
+/* 资金表 */
+.tr-cash { height: 100%; padding: 6px 8px; overflow: auto;
+  display: flex; flex-direction: column; gap: 6px; }
+.tr-cash-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px 14px; }
+.tr-cash-grid .kv > .v { font-variant-numeric: tabular-nums; }
+.tr-curve { display: block; width: 100%; height: 84px;
+  border: 1px solid var(--border); background: var(--panel-2); }
+.tr-cash-hint { font-size: var(--fs-sm); }
+
+/* 右键菜单 */
+.tr-menu {
+  position: fixed; z-index: 9999; min-width: 132px; padding: 3px 0;
+  background: var(--panel); border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.tr-mi { padding: 3px 16px; cursor: pointer; color: var(--text); white-space: nowrap; }
+.tr-mi:hover { background: var(--sel); }
+.tr-mi.disabled { color: var(--text-3); cursor: not-allowed; }
+.tr-mi.disabled:hover { background: transparent; }

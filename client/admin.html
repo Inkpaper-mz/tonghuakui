@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>同花亏 · 运维控制台</title>
+<link rel="stylesheet" href="./css/admin.css" />
+</head>
+<body>
+<!-- ═══════════════════════════════════════════════════════════════
+     同花亏 · 运维控制台（OPS Console）
+     三栏 + 底部日志；纯静态骨架，全部动态内容由 js/admin.js 用
+     DOM API + textContent 写入（绝不 innerHTML 拼接外部数据）。
+     仅消费服务端已实现的 admin:auth / admin:event / admin:state 协议。
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="adm" id="adminApp" data-authed="0">
+
+  <!-- ─────────── 未鉴权遮罩（居中卡片）─────────── -->
+  <div class="adm-gate" id="admGate" data-state="waiting">
+    <div class="adm-gate-card">
+      <div class="adm-gate-logo" aria-hidden="true">🛠️</div>
+      <h1 class="adm-gate-title">同花亏 · 运维控制台</h1>
+      <p class="adm-gate-sub">
+        输入管理密钥以启用「上帝之手」，对进行中的对局投放宏观 / 板块 / 个股事件。
+      </p>
+      <p class="adm-gate-tip">密钥在服务端 <code>data/admin-key.txt</code>（或环境变量 <code>THK_ADMIN_KEY</code>）</p>
+      <div class="adm-gate-form">
+        <input id="gateKey" class="adm-input adm-gate-input" type="password" placeholder="管理密钥"
+               autocomplete="current-password" spellcheck="false" />
+        <button id="gateBtn" class="adm-btn adm-btn-primary" type="button">进入控制台</button>
+      </div>
+      <div class="adm-gate-msg" id="gateErr" role="alert"></div>
+      <div class="adm-gate-foot">
+        <i class="adm-dot" id="gateDot"></i><span id="gateFoot">等待连接服务端…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── 顶栏 ─────────── -->
+  <header class="adm-top">
+    <div class="adm-brand">
+      <span class="adm-brand-mark" aria-hidden="true">🛠️</span>
+      <span class="adm-brand-title">同花亏 · 运维控制台</span>
+      <span class="adm-brand-sub">OPS</span>
+    </div>
+    <div class="adm-topstats">
+      <span class="adm-stat" title="WebSocket 连接状态">
+        <i class="adm-dot" id="connDot"></i><span id="connText">未连接</span>
+      </span>
+      <span class="adm-vsep"></span>
+      <span class="adm-stat">在线 <b id="statOnline">–</b></span>
+      <span class="adm-stat">进行中对局 <b id="statRooms">–</b></span>
+      <span class="adm-vsep"></span>
+      <span class="adm-stat adm-clock" id="statClock" title="服务端时间">--:--:--</span>
+    </div>
+    <div class="adm-topright">
+      <input id="keyInput" class="adm-input adm-keyinput" type="password" placeholder="管理密钥"
+             autocomplete="current-password" spellcheck="false" />
+      <button id="keyApply" class="adm-btn" type="button">应用密钥</button>
+      <button id="btnDisconnect" class="adm-btn adm-btn-danger" type="button">断开</button>
+    </div>
+  </header>
+
+  <!-- ─────────── 主体三栏 ─────────── -->
+  <main class="adm-main">
+
+    <!-- ══ 左栏 · 股票选择器 ══ -->
+    <aside class="adm-col adm-col-left">
+      <div class="adm-colhead">
+        <span class="adm-coltitle">股票选择器</span>
+        <span class="adm-dim" id="stockCount">–</span>
+      </div>
+      <div class="adm-filters">
+        <input id="stockSearch" class="adm-input" type="search" placeholder="搜索 代码 / 名称"
+               spellcheck="false" autocomplete="off" />
+        <div class="adm-filters-row">
+          <select id="sectorSelect" class="adm-input adm-select" title="按板块筛选列表">
+            <option value="">全部板块</option>
+          </select>
+          <label class="adm-switch" title="只显示处于停牌或托底状态的股票">
+            <input id="onlySpecial" type="checkbox" /><span>只看停牌/托底</span>
+          </label>
+        </div>
+      </div>
+      <!-- 固定的「全市场」伪条目 -->
+      <button id="marketRow" class="adm-marketrow" type="button" data-mode="market">
+        <span class="adm-marketrow-icon" aria-hidden="true">🌐</span>
+        <span class="adm-marketrow-main">全市场</span>
+        <span class="adm-marketrow-sub" id="marketRowSub">宏观事件</span>
+      </button>
+      <div class="adm-stockhead">
+        <span class="c-code">代码</span><span class="c-name">名称</span>
+        <span class="c-price">现价</span><span class="c-chg">涨跌幅</span>
+      </div>
+      <div class="adm-scroll" id="stockList" role="listbox" aria-label="股票列表"></div>
+    </aside>
+
+    <!-- ══ 中栏 · 目标详情 + 操作 ══ -->
+    <section class="adm-col adm-col-mid">
+      <div class="adm-colhead">
+        <span class="adm-coltitle">当前目标</span>
+        <div class="adm-modetabs" id="modeTabs">
+          <button class="adm-tab" type="button" data-mode="stock">个股</button>
+          <button class="adm-tab" type="button" data-mode="sector">板块</button>
+          <button class="adm-tab" type="button" data-mode="market">全市场</button>
+        </div>
+      </div>
+
+      <div class="adm-target" id="targetCard"></div>
+
+      <div class="adm-controls">
+        <div class="adm-ctrl">
+          <label class="adm-ctrl-label" for="strengthRange" title="事件强度倍率（服务端允许 0.1 ~ 1.5）">强度</label>
+          <input id="strengthRange" class="adm-range" type="range" min="0.2" max="1.5" step="0.1" value="1" />
+          <output class="adm-ctrl-val" id="strengthVal" for="strengthRange">1.0×</output>
+        </div>
+        <div class="adm-ctrl">
+          <label class="adm-ctrl-label" for="ticksInput" title="覆盖事件的默认持续 tick">时长</label>
+          <input id="ticksInput" class="adm-input adm-ticks" type="number" min="0" max="600" step="10" value="0" />
+          <span class="adm-ctrl-hint" id="ticksHint">0 = 用目录默认</span>
+        </div>
+      </div>
+
+      <div class="adm-opshead">
+        <span class="adm-coltitle">事件投放</span>
+        <span class="adm-dim" id="opsHint"></span>
+      </div>
+      <div class="adm-scroll adm-ops" id="opGroups"></div>
+    </section>
+
+    <!-- ══ 右栏 · 实时盘面 ══ -->
+    <aside class="adm-col adm-col-right" id="rightCol">
+      <div class="adm-right-scroll adm-scroll">
+      <div class="adm-colhead"><span class="adm-coltitle">指数</span><span class="adm-dim" id="idxCount">4</span></div>
+      <div class="adm-idxlist" id="idxList"></div>
+
+      <div class="adm-colhead"><span class="adm-coltitle">涨幅榜</span><span class="adm-dim">点击选中</span></div>
+      <div class="adm-rank" id="upList"></div>
+
+      <div class="adm-colhead"><span class="adm-coltitle">跌幅榜</span><span class="adm-dim">点击选中</span></div>
+      <div class="adm-rank" id="downList"></div>
+
+      <div class="adm-colhead"><span class="adm-coltitle">特殊状态</span><span class="adm-dim" id="specialCount">0</span></div>
+      <div class="adm-special" id="specialList"></div>
+
+      <div class="adm-colhead"><span class="adm-coltitle">进行中对局</span><span class="adm-dim" id="roomCount">0</span></div>
+      <div class="adm-rooms" id="roomList"></div>
+      </div><!-- /.adm-right-scroll -->
+
+      <!-- 对局控制：暂停/继续 · 调速 · 强制休市 · 跳到下一交易日
+           （常驻右栏底部，不随盘面滚动） -->
+      <div class="adm-ctrlpanel" id="gameCtrl">
+        <div class="adm-colhead">
+          <span class="adm-coltitle">对局控制</span>
+          <span class="adm-ctrl-state is-running" id="ctrlPauseState">无对局</span>
+        </div>
+        <div class="adm-ctrlpanel-body">
+          <div class="adm-crow">
+            <select id="ctrlRoom" class="adm-input adm-select" title="控制指令的作用范围（不带 roomId 即对所有进行中对局生效）">
+              <option value="">全部进行中对局（0）</option>
+            </select>
+            <button id="btnPause" class="adm-btn" type="button" data-action="pause">⏸ 暂停</button>
+          </div>
+          <div class="adm-crow">
+            <span class="adm-ctrl-label">速度</span>
+            <span class="adm-speedbtns" id="speedBtns"></span>
+            <input id="speedCustom" class="adm-input adm-num" type="number" min="1" max="60" step="1" value="5" title="自定义：1 个虚拟分钟 = N 真实秒" />
+            <button id="speedApply" class="adm-btn adm-btn-mini" type="button">应用</button>
+            <span class="adm-speedtext" id="speedText">1 虚拟分钟 = <b class="adm-speedval" id="speedVal">5</b> 秒</span>
+          </div>
+          <div class="adm-crow">
+            <span class="adm-ctrl-label">休市</span>
+            <input id="breakSec" class="adm-input adm-num" type="number" min="1" max="600" step="10" value="60" title="休市秒数（1~600）" />
+            <button id="btnBreak" class="adm-btn" type="button">☕ 强制休市</button>
+            <button id="btnEndBreak" class="adm-btn" type="button">结束休市</button>
+            <span class="adm-break-left" id="breakLeft"></span>
+          </div>
+          <div class="adm-crow">
+            <button id="btnNextDay" class="adm-btn" type="button">⏭ 跳到下一交易日</button>
+            <span class="adm-dim" id="ctrlDay"></span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ─────────── 底部 · 操作日志 ─────────── -->
+  <footer class="adm-log" id="logPanel">
+    <div class="adm-loghead">
+      <span class="adm-coltitle">操作日志</span>
+      <span class="adm-dim" id="logCount">0 条</span>
+      <span class="adm-spacer"></span>
+      <span class="adm-dim" id="logHint">时间 · 事件 · 目标 · 作用 · 结果</span>
+      <button id="logClear" class="adm-btn adm-btn-mini" type="button">清空</button>
+      <button id="logToggle" class="adm-btn adm-btn-mini" type="button">折叠</button>
+    </div>
+    <div class="adm-scroll adm-logbody" id="logList"></div>
+  </footer>
+</div>
+<script type="module" src="./js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+/* ═══════════════════════════════════════════════════════════════
+   同花亏 · theme.css —— 设计系统：CSS 变量 + reset + 共享原子类
+   规则：其他 CSS 文件只准引用本文件里的变量与原子类，不得重复造。
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── 窗口外壳（Windows 经典控件质感）── */
+  --chrome:        #1b4f8a;
+  --chrome-2:      #2a6bb0;
+  --chrome-3:      #123a68;
+  --toolbar:       #eef1f4;
+  --toolbar-2:     #dfe5ea;
+
+  /* ── 面板与背景 ── */
+  --bg:            #eef1f4;
+  --panel:         #ffffff;
+  --panel-2:       #f7f9fb;
+  --panel-3:       #eceff3;
+  --border:        #c3ccd6;
+  --border-2:      #dfe4ea;
+  --sel:           #dceafd;
+  --sel-strong:    #1b4f8a;
+  --shadow:        0 1px 2px rgba(0,0,0,.08);
+  --inset:         inset 0 1px 0 rgba(255,255,255,.9);
+
+  /* ── 文字 ── */
+  --text:          #1a1a1a;
+  --text-2:        #4a4a4a;
+  --text-3:        #8a8a8a;
+  --text-inv:      #ffffff;
+
+  /* ── 行情语义色：红涨绿跌（中国习惯）── */
+  --up:            #f5333f;
+  --up-bg:         rgba(245,51,63,.10);
+  --down:          #12b886;
+  --down-bg:       rgba(18,184,134,.12);
+  --flat:          #7a7a7a;
+
+  --accent:        #1b4f8a;
+  --link:          #0b5fbf;
+  --warn:          #e8a33d;
+  --ok:            #12b886;
+  --buy:           #e5343d;
+  --sell:          #12a06a;
+
+  /* ── 尺寸 ── */
+  --h-title:       32px;
+  --h-toolbar:     36px;
+  --h-tab:         30px;
+  --h-status:      26px;
+  --fs:            12px;
+  --fs-sm:         11px;
+  --fs-lg:         13px;
+  --fs-xl:         15px;
+  --radius:        2px;
+
+  --font: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Segoe UI",
+          "Noto Sans CJK SC", "WenQuanYi Micro Hei", Arial, sans-serif;
+  --mono: "Consolas", "Menlo", "DejaVu Sans Mono", monospace;
+}
+
+body.dark {
+  --chrome:        #10151c;
+  --chrome-2:      #1c2735;
+  --chrome-3:      #0a0e13;
+  --toolbar:       #1a2029;
+  --toolbar-2:     #141a22;
+
+  --bg:            #12161c;
+  --panel:         #1a2029;
+  --panel-2:       #1f2732;
+  --panel-3:       #232c38;
+  --border:        #2a3341;
+  --border-2:      #232c38;
+  --sel:           #1d3550;
+  --sel-strong:    #2a6bb0;
+  --shadow:        0 1px 2px rgba(0,0,0,.5);
+  --inset:         inset 0 1px 0 rgba(255,255,255,.04);
+
+  --text:          #e5e6eb;
+  --text-2:        #a9b0bc;
+  --text-3:        #9aa5b4;
+
+  --up:            #ff4d5a;
+  --up-bg:         rgba(255,77,90,.12);
+  --down:          #1fd39a;
+  --down-bg:       rgba(31,211,154,.12);
+  --flat:          #8b93a1;
+
+  --accent:        #2a6bb0;
+  --link:          #5f9cf5;
+  --buy:           #f0484f;
+  --sell:          #17b877;
+}
+
+/* ── reset ── */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  font-size: var(--fs);
+  color: var(--text);
+  background: var(--bg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button, input, select, textarea { font-family: inherit; font-size: var(--fs); color: inherit; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+h1,h2,h3,h4,h5 { margin: 0; font-weight: 700; }
+table { border-collapse: collapse; border-spacing: 0; }
+::selection { background: var(--sel-strong); color: #fff; }
+
+/* ── 滚动条（Windows 风格细窄）── */
+.scroll, .scroll * { scrollbar-width: thin; scrollbar-color: #a9b4c0 transparent; }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--panel-2); border-left: 1px solid var(--border-2); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg,#c8d2dd,#aeb9c6);
+  border: 2px solid var(--panel-2); border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg,#b3bfcd,#98a5b4); }
+::-webkit-scrollbar-corner { background: var(--panel-2); }
+body.dark ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#39465a,#2c3749); }
+
+/* ═══════════ 文字语义色（红涨绿跌）═══════════ */
+.up    { color: var(--up) !important; }
+.down  { color: var(--down) !important; }
+.flat  { color: var(--flat) !important; }
+.num   { font-variant-numeric: tabular-nums; text-align: right; font-feature-settings: "tnum" 1; }
+.mono  { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nowrap{ white-space: nowrap; }
+.dim   { color: var(--text-3); }
+.strong{ font-weight: 700; }
+.center{ text-align: center; }
+.hidden{ display: none !important; }
+
+/* ═══════════ 按钮 ═══════════ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  height: 24px; padding: 0 10px;
+  background: linear-gradient(180deg, #fdfefe 0%, #eef1f4 45%, #e3e8ee 100%);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); cursor: pointer; white-space: nowrap;
+  box-shadow: var(--inset);
+}
+.btn:hover  { background: linear-gradient(180deg,#ffffff 0%,#f2f6fa 45%,#e8eef5 100%); border-color: #9fb0c2; }
+.btn:active { background: linear-gradient(180deg,#dde3ea,#e8edf3); box-shadow: inset 0 1px 3px rgba(0,0,0,.22); }
+.btn[disabled], .btn.disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.btn-sm { height: 20px; padding: 0 7px; font-size: var(--fs-sm); }
+.btn-lg { height: 34px; padding: 0 18px; font-size: var(--fs-xl); font-weight: 700; }
+.btn-primary { background: linear-gradient(180deg,#3f7fbe,#1b4f8a); border-color:#123a68; color:#fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+.btn-primary:hover { background: linear-gradient(180deg,#4a8ccb,#205a99); }
+.btn-buy  { background: linear-gradient(180deg,#f4646c,#d9222b); border-color:#a8161d; color:#fff; font-weight:700; box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+.btn-buy:hover  { background: linear-gradient(180deg,#fa747c,#e32b34); }
+.btn-sell { background: linear-gradient(180deg,#2fc98f,#0f9a68); border-color:#0a7a52; color:#fff; font-weight:700; box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+.btn-sell:hover { background: linear-gradient(180deg,#3ad79b,#12a771); }
+.btn-ghost { background: transparent; border-color: transparent; box-shadow: none; }
+.btn-ghost:hover { background: var(--sel); border-color: var(--border-2); }
+.btn-flat { background: var(--panel); }
+
+/* ═══════════ 表单控件 ═══════════ */
+.input, .select {
+  height: 22px; padding: 0 6px;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,.06);
+}
+.input:focus, .select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(43,107,176,.18); }
+.input[readonly] { background: var(--panel-2); color: var(--text-3); }
+.select { padding-right: 2px; }
+textarea.input { height: auto; padding: 5px 6px; resize: none; }
+label.fld { display: inline-flex; align-items: center; gap: 5px; color: var(--text-2); }
+
+/* 数字步进器 */
+.stepper { display: inline-flex; align-items: stretch; }
+.stepper .input { border-radius: 0; text-align: center; }
+.stepper > button {
+  width: 20px; border: 1px solid var(--border); background: linear-gradient(180deg,#fbfcfd,#e8edf3);
+  cursor: pointer; color: var(--text-2); line-height: 1; padding: 0;
+}
+.stepper > button:hover { background: linear-gradient(180deg,#fff,#eef3f9); border-color:#9fb0c2; }
+.stepper > button:active { box-shadow: inset 0 1px 3px rgba(0,0,0,.2); }
+.stepper > button:first-child { border-radius: var(--radius) 0 0 var(--radius); border-right: 0; }
+.stepper > button:last-child  { border-radius: 0 var(--radius) var(--radius) 0; border-left: 0; }
+
+/* ═══════════ 夜间模式：浅色渐变控件 → 深色控件 ═══════════
+   上面的 .btn / .stepper > button 用的是 Windows 经典「浅色渐变」硬编码底色，
+   夜间模式只把文字色切成了浅色 → 浅底浅字（实测对比度 1.03 ~ 2.12）不可读。
+   这里补齐深色底 / 深色边框，文字继续用 --text / --text-2，
+   实测量对比度：主文字 ≈ 10，次文字 ≈ 5.7（均 ≥ 4.5），白天模式完全不受影响。
+   注意：`body.dark .btn` 的权重高于 `.btn-primary/-buy/-sell/-ghost/-flat`，
+        必须在这里重新声明这几个变体，否则会被整片覆盖成灰按钮。 */
+body.dark .btn {
+  background: linear-gradient(180deg, #2b3542 0%, #232c38 50%, #1b232d 100%);
+  border-color: #3c4a5c;
+  box-shadow: var(--inset);
+}
+body.dark .btn:hover  { background: linear-gradient(180deg,#333e4c 0%,#2b3542 50%,#242d38 100%); border-color:#53627a; }
+body.dark .btn:active { background: linear-gradient(180deg,#161c24,#232c38); box-shadow: inset 0 1px 3px rgba(0,0,0,.5); }
+body.dark .btn-primary { background: linear-gradient(180deg,#3670a8,#1b4f8a); border-color:#123a68; color:#fff; }
+body.dark .btn-primary:hover { background: linear-gradient(180deg,#3f7fbe,#205a99); }
+body.dark .btn-buy  { background: linear-gradient(180deg,#cf3f49,#9e1a23); border-color:#7d151c; color:#fff; }
+body.dark .btn-buy:hover  { background: linear-gradient(180deg,#d94b55,#ab2029); }
+body.dark .btn-sell { background: linear-gradient(180deg,#147a52,#0a5539); border-color:#07402b; color:#fff; }
+body.dark .btn-sell:hover { background: linear-gradient(180deg,#198b5e,#0d6343); }
+body.dark .btn-ghost { background: transparent; border-color: transparent; box-shadow: none; }
+body.dark .btn-ghost:hover { background: var(--sel); border-color: var(--border-2); }
+body.dark .btn-flat { background: var(--panel); }
+body.dark .stepper > button { background: linear-gradient(180deg,#2b3542,#1b232d); border-color:#3c4a5c; color: var(--text-2); }
+body.dark .stepper > button:hover { background: linear-gradient(180deg,#333e4c,#242d38); border-color:#53627a; }
+
+/* ═══════════ 面板 ═══════════ */
+.panel {
+  display: flex; flex-direction: column; min-height: 0;
+  background: var(--panel); border: 1px solid var(--border);
+}
+.panel-hd {
+  display: flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 7px; flex: none;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel-3));
+  border-bottom: 1px solid var(--border-2);
+  font-size: var(--fs); font-weight: 700; color: var(--text-2);
+  user-select: none;
+}
+.panel-hd .hd-right { margin-left: auto; display: flex; align-items: center; gap: 4px; font-weight: 400; }
+.panel-bd { flex: 1; min-height: 0; overflow: auto; }
+.panel-bd.pad { padding: 6px; }
+
+/* ═══════════ 表格（行情/持仓/委托 通用）═══════════ */
+.tbl { width: 100%; font-size: var(--fs); font-variant-numeric: tabular-nums; }
+.tbl thead th {
+  position: sticky; top: 0; z-index: 2;
+  height: 22px; padding: 0 6px;
+  background: linear-gradient(180deg, #f7f9fb 0%, #e9edf2 100%);
+  border-bottom: 1px solid var(--border); border-right: 1px solid var(--border-2);
+  font-weight: 400; color: var(--text-2); text-align: right; white-space: nowrap;
+  cursor: default; user-select: none;
+}
+body.dark .tbl thead th { background: linear-gradient(180deg,#232c38,#1b232d); }
+.tbl thead th:first-child { text-align: center; }
+.tbl thead th.sortable { cursor: pointer; }
+.tbl thead th.sortable:hover { background: var(--sel); }
+.tbl thead th .arw { color: var(--accent); font-size: 9px; margin-left: 2px; }
+/* 夜间：表头深底上 --accent 只有 2.57，排序箭头 ▲▼ 换亮一档的 --link ≈ 5.1 */
+body.dark .tbl thead th .arw { color: var(--link); }
+.tbl tbody td {
+  height: 20px; padding: 0 6px; border-bottom: 1px solid var(--border-2);
+  text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tbl tbody td.l { text-align: left; }
+.tbl tbody td.c { text-align: center; }
+.tbl tbody tr:hover > td { background: var(--sel); }
+.tbl tbody tr.sel > td { background: var(--sel-strong); color: #fff !important; }
+.tbl tbody tr.sel > td .up, .tbl tbody tr.sel > td .down { color: #fff !important; }
+.tbl tbody tr.zt > td:first-child, .tbl tbody tr.zt .price { color: var(--up); font-weight: 700; }
+.tbl tbody tr.dt > td:first-child, .tbl tbody tr.dt .price { color: var(--down); font-weight: 700; }
+.tbl.striped tbody tr:nth-child(even) > td { background: rgba(0,0,0,.018); }
+body.dark .tbl.striped tbody tr:nth-child(even) > td { background: rgba(255,255,255,.02); }
+.tbl .code { color: var(--link); font-variant-numeric: tabular-nums; }
+.tbl tfoot td { height: 22px; padding: 0 6px; text-align: right; background: var(--panel-2); border-top: 1px solid var(--border); font-weight: 700; }
+
+/* ═══════════ 标签 / 徽章 / 状态点 ═══════════ */
+.tag {
+  display: inline-flex; align-items: center; height: 16px; padding: 0 5px;
+  border: 1px solid var(--border); border-radius: 2px;
+  background: var(--panel-2); color: var(--text-2); font-size: var(--fs-sm);
+}
+.tag-up   { color: var(--up);   border-color: var(--up);   background: var(--up-bg); }
+.tag-down { color: var(--down); border-color: var(--down); background: var(--down-bg); }
+.tag-warn { color: var(--warn); border-color: var(--warn); background: rgba(232,163,61,.12); }
+.tag-blue { color: var(--link); border-color: var(--link); background: rgba(11,95,191,.1); }
+.badge {
+  display: inline-block; min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
+  border-radius: 8px; background: var(--up); color: #fff; font-size: 10px; text-align: center;
+}
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: middle; }
+.dot-red    { background: #d93025; box-shadow: 0 0 4px rgba(217,48,37,.8); }
+.dot-yellow { background: #e8a33d; box-shadow: 0 0 4px rgba(232,163,61,.8); }
+.dot-green  { background: #17b877; box-shadow: 0 0 4px rgba(23,184,119,.8); }
+
+/* ═══════════ 可拖拽分隔条 ═══════════ */
+.split { flex: none; background: var(--bg); position: relative; }
+.split-v { width: 5px; cursor: col-resize; }
+.split-h { height: 5px; cursor: row-resize; }
+.split:hover, .split.dragging { background: var(--accent); }
+
+/* ═══════════ 键值对 ═══════════ */
+.kv { display: flex; align-items: center; gap: 4px; height: 18px; }
+.kv > .k { color: var(--text-3); flex: none; }
+.kv > .v { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--text); }
+
+/* ═══════════ 空态 ═══════════ */
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; min-height: 60px; color: var(--text-3); gap: 6px; font-size: var(--fs); }
+.empty .ico { font-size: 26px; opacity: .35; }
+
+/* ═══════════ 分区标题 ═══════════ */
+.subhd {
+  display: flex; align-items: center; gap: 6px; height: 20px; padding: 0 6px;
+  background: var(--panel-2); border-bottom: 1px solid var(--border-2);
+  color: var(--text-3); font-size: var(--fs-sm);
+}
+
+/* ═══════════ 动画 ═══════════ */
+@keyframes flash-up   { 0% { background: var(--up-bg); }   100% { background: transparent; } }
+@keyframes flash-down { 0% { background: var(--down-bg); } 100% { background: transparent; } }
+@keyframes pop-in     { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.flash-up   { animation: flash-up   700ms ease-out; }
+.flash-down { animation: flash-down 700ms ease-out; }
