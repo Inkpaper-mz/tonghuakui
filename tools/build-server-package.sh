@@ -28,7 +28,7 @@ cp -R server/src "$STAGE/server/src"
 cp -R client/. "$STAGE/client/"
 
 # ── 4. 文档与部署件 ──
-cp README.md PROTOCOL.md DESIGN.md LICENSE NOTICE.md "$STAGE/"
+cp README.md README.en.md README.ja.md PROTOCOL.md DESIGN.md LICENSE NOTICE.md "$STAGE/"
 cp -R deploy/. "$STAGE/deploy/"
 cp docs/DEPLOY-LINUX.md docs/DEPLOY-WINDOWS.md docs/USER-GUIDE.md "$STAGE/docs/" 2>/dev/null || true
 if [ -d docs/screenshots ]; then
