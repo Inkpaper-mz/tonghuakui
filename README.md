@@ -213,3 +213,8 @@ tonghuakui/
 * [LICENSE](LICENSE) —— MIT
 
 > ⚠️ 免责声明：本项目中的股票代码、名称、行情、新闻均为**虚构**，仅用于教学与娱乐，与真实市场无关，不构成任何投资建议。
+
+## Contributors
+
+- [Inkpaper-mz](https://github.com/Inkpaper-Mz) — author & maintainer
+- [DeepSeek](https://github.com/deepseek-ai) — AI pair programmer (architecture, implementation, debugging, docs)

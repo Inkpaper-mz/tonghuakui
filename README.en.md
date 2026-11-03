@@ -213,3 +213,8 @@ tonghuakui/
 * [LICENSE](LICENSE) — MIT
 
 > ⚠️ Disclaimer: every stock code, company name, quote and news item in this project is **fictional**. It is made for learning and entertainment only, has nothing to do with real markets, and is **not investment advice**. "Tonghuashun (同花顺)" is a trademark of its owner; this project is a stylistic homage for study and is not affiliated with it.
+
+## Contributors
+
+- [Inkpaper-mz](https://github.com/Inkpaper-Mz) — author & maintainer
+- [DeepSeek](https://github.com/deepseek-ai) — AI pair programmer (architecture, implementation, debugging, docs)
