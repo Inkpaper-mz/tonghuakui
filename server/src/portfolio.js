@@ -267,14 +267,24 @@ class Portfolio {
       ? this.calcFee(amount, side)
       : util.round2(Number(fee));
 
-    const pos = this._pos(stockId, true);
     const order = (orderId && this.orders.get(orderId)) || null;
+    if (side !== 'buy' && side !== 'sell') return null;
+    if (feeR < 0) return null;
+    if (side === 'buy') {
+      const availableFrozen = order ? Math.min(this.frozen, Math.max(0, Number(order.frozen) || 0)) : 0;
+      if (amount + feeR > this.cash + availableFrozen + 1e-8) return null;
+    } else {
+      const held = this._pos(stockId, false);
+      if (!held || held.qty < q || (order ? Math.min(held.frozen || 0, order.frozenShares || 0) : held.avail) < q) return null;
+    }
+    const pos = this._pos(stockId, true);
     let pnl = null;
 
     if (side === 'sell') {
       if (pos.qty < q) return null;   // 引擎已校验，这里是最后一道防线
       // 卖出：qty 减少、冻结股份释放（avail 在下单冻结时已扣减）
       pos.qty -= q;
+      if (!order) pos.avail -= q;
       const relShares = Math.min(pos.frozen || 0, q);
       pos.frozen = (pos.frozen || 0) - relShares;
       if (order) order.frozenShares = Math.max(0, (Number(order.frozenShares) || 0) - relShares);
@@ -288,12 +298,12 @@ class Portfolio {
       // 买入：qty 增加、avail 不变（T+1），加权平均成本含手续费
       const oldQty = pos.qty;
       const newQty = oldQty + q;
-      pos.avgCost = util.round2((oldQty * (pos.avgCost || 0) + amount + feeR) / newQty);
+      pos.avgCost = (oldQty * (pos.avgCost || 0) + amount + feeR) / newQty;
       pos.qty = newQty;
       pos.lastBuyDay = Number.isFinite(Number(dayIndex)) ? Number(dayIndex) : pos.lastBuyDay;
       // 资金：优先从该委托的冻结额中划出，不足部分从可用资金补
       const cost = util.round2(amount + feeR);
-      let fromFrozen = Math.min(this.frozen, cost);
+      let fromFrozen = order ? Math.min(this.frozen, cost) : 0;
       if (order) fromFrozen = Math.min(fromFrozen, Math.max(0, Number(order.frozen) || 0));
       fromFrozen = util.round2(Math.max(0, fromFrozen));
       this.frozen = util.round2(this.frozen - fromFrozen);

@@ -137,6 +137,7 @@ class Room extends EventEmitter {
       });
     }
     if (!this.engine) this.engine = new MatchingEngine({ market: this.market, config: cfg });
+    this.engine.isTradingOpen = () => !this.paused && !(this.breakUntil && Date.now() < this.breakUntil);
     if (!this.news) this.news = new NewsEngine({ market: this.market, config: cfg });
     if (this.engine && typeof this.engine.on === 'function') {
       this.engine.on('order', (ev) => this._onEngineOrder(ev));

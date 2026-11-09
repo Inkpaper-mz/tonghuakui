@@ -275,6 +275,7 @@ class Market {
         liqPerTick,
         liqBase: liqPerTick,
         fair: prevClose,                       // 内在价值（不受玩家买卖影响，自行演化）
+        overnightGap: 0,                        // 日切时待应用的一次性隔夜跳空对数收益
         flowScale: 1 / Math.max(1, liqPerTick),
         impact: 0,
         newsImpact: 0,
@@ -453,7 +454,7 @@ class Market {
          现在按个股波动率给一个默认跳空幅度（约 0.35×日波动），真实 A 股多数股票每天都会有跳空。 */
       const ovBase = Number(s.overnight) > 0 ? Number(s.overnight) : (Number(s.vol) || 0.0025) * 0.9;
       const ov = ovBase * this._randn();
-      st.impact = clamp(ov || 0, -0.06, 0.06);
+      st.overnightGap = clamp(ov || 0, -0.06, 0.06);
     }
     this._buildDaySectors();
     this._snapshotDayOpen();
@@ -580,7 +581,11 @@ class Market {
     }
 
     const revert = 0;   // 已被「内在价值锚」取代（见上）
-    const logret0 = sectorTerm + macro + noise + drift + revert + anchor + st.impact + st.newsImpact + st.newsStock;
+    /* impact 已通过 fair × exp(impact) 形成价格目标，不能再作为每 tick 收益重复叠加。
+       隔夜跳空是一次性收益，消费后清零；不受停牌时早退影响，可在复牌时补上。 */
+    const overnightGap = Number(st.overnightGap) || 0;
+    st.overnightGap = 0;
+    const logret0 = sectorTerm + macro + noise + drift + revert + anchor + overnightGap + st.newsImpact + st.newsStock;
 
     // 涨跌停边界阻尼：越接近停板越难继续朝该方向走（避免大面积锁死在一字板）
     let lp = logret0;
@@ -777,8 +782,11 @@ class Market {
     const atLimitUp = st.limitUp > 0 && price >= st.limitUp - 0.005;
     const atLimitDown = st.limitDown > 0 && price <= st.limitDown + 0.005;
 
-    const b = atLimitDown ? [] : this._makeLevels(st, 'b', price, 5);
-    const s = atLimitUp ? [] : this._makeLevels(st, 's', price, 5);
+    if (!st.depth || st.depth.seq !== this._seq) {
+      st.depth = { seq: this._seq, b: atLimitDown ? [] : this._makeLevels(st, 'b', price, 5), s: atLimitUp ? [] : this._makeLevels(st, 's', price, 5) };
+    }
+    const b = st.depth.b.filter(x => x[1] > 0).map(x => x.slice());
+    const s = st.depth.s.filter(x => x[1] > 0).map(x => x.slice());
     // 合成明细 + 本 tick 已发生的玩家成交明细（recordTrade 写入，跨重建保留）
     const tr = this._makeTrades(st, price).concat(st.extTr || []);
     if (tr.length > 12) tr.splice(0, tr.length - 12);
@@ -874,8 +882,10 @@ class Market {
     if (!st) return null;
     const buy = side === 'buy' ? true : side === 'sell' ? false : null;
     if (buy === null) return null;
-    const levels = st.q ? (buy ? st.q.s : st.q.b) : null;
+    const quote = this._qcache(stockId);
+    const levels = quote ? (buy ? quote.s : quote.b) : null;
     if (levels && levels.length) return { price: levels[0][0], qty: levels[0][1] };
+    if (st.depth && st.depth.seq === this._seq) return null;
     // 快照未生成 / 停板无档
     if (buy) {
       if (st.rounded >= st.limitUp - 0.005) return null;
@@ -1104,115 +1114,40 @@ class Market {
    * 涨停无卖档 / 跌停无买档的行为保持不变。
    * @returns {{fills:Array<{price:number,qty:number}>, filledQty:number, avgPrice:number, notional:number, exhausted:boolean}}
    */
-  consumeLiquidity(stockId, side, qty, limitPrice) {
+  consumeLiquidity(stockId, side, qty, limitPrice, preview = false) {
+    const empty = { fills: [], filledQty: 0, avgPrice: 0, notional: 0, exhausted: true };
     const st = this.S.get(stockId);
-    const wanted0 = Math.max(0, Math.round(Number(qty) || 0));
-    const empty = { fills: [], filledQty: 0, avgPrice: 0, notional: 0, exhausted: false };
-    if (!st || wanted0 === 0) return empty;
-
-    const buy = side === 'buy' ? true : side === 'sell' ? false : null;
-    if (buy === null) return empty;
-
-    const price = st.rounded;
-    const bookSide = buy ? st.q && st.q.s : st.q && st.q.b;
-    // 涨停无卖档 / 跌停无买档 → 吃不到
-    if (buy && bookSide && bookSide.length === 0) return empty;
-    if (!buy && bookSide && bookSide.length === 0) return empty;
-
-    const lim = Number(limitPrice) > 0 ? Number(limitPrice) : null;
-    const levels = [];
-    if (bookSide && bookSide.length) {
-      for (const lv of bookSide) levels.push([Number(lv[0]), Math.max(0, Number(lv[1]) || 0)]);
-    } else {
-      const seedP = buy ? price + 0.01 : price - 0.01;
-      if (buy && seedP > st.limitUp) return empty;
-      if (!buy && seedP < st.limitDown) return empty;
-      levels.push([snap(seedP), this._levelQty(st)]);
-    }
-
-    // 基准 touch = 起始档位里最优的价（买一 / 卖一）
-    const touch = levels[0][0];
-
-    // 本 tick 剩余可吃预算
-    if (!isFinite(st.flowBudget)) st.flowBudget = st.liqPerTick * FLOW_BUDGET_TICKS;
-    let budget = Math.max(0, Math.round(st.flowBudget));
-    const want = Math.min(wanted0, budget);
-    if (want <= 0) return empty;
-
+    if (!st || !['buy', 'sell'].includes(side) || (st.haltedUntil && this._seq < st.haltedUntil)) return empty;
+    this._qcache(stockId);
+    if (!st.depth) return empty;
+    const levels = st.depth[side === 'buy' ? 's' : 'b'];
+    let remain = Math.min(Math.max(0, Math.floor(qty)), Math.max(0, Math.floor(st.flowBudget)));
     const fills = [];
-    let remain = want;
-    let notional = 0;
-    let filledQty = 0;
-    let lastP = touch;
-
-    const walkOk = (p) => {
-      // 价格偏离 touch 的幅度上限
-      const dev = Math.abs(p / touch - 1);
-      return dev <= MAX_WALK_PCT + 1e-9;
-    };
-    const allowed = (p) => {
-      if (buy && p > st.limitUp) return false;
-      if (!buy && p < st.limitDown) return false;
-      if (lim !== null && (buy ? p > lim + 1e-9 : p < lim - 1e-9)) return false;
-      return true;
-    };
-
-    // 1) 先吃对手挂着的档位（合成五档）
-    for (let i = 0; i < levels.length && remain > 0; i++) {
-      const [p, bookQty] = levels[i];
-      if (!allowed(p)) break;
-      if (!walkOk(p)) break;
-      const take = Math.min(remain, bookQty);
-      if (take <= 0) continue;
-      const t = Math.round(take);
-      if (t <= 0) continue;
-      fills.push({ price: p, qty: t });
-      notional += p * t;
-      filledQty += t;
-      remain -= t;
-      lastP = p;
+    for (const [price, available] of levels) {
+      if (limitPrice > 0 && (side === 'buy' ? price > limitPrice : price < limitPrice)) break;
+      const take = Math.min(remain, available);
+      if (take > 0) { fills.push({ price, qty: take }); remain -= take; }
+      if (!remain) break;
     }
+    const filledQty = fills.reduce((n, f) => n + f.qty, 0);
+    const notional = round2(fills.reduce((n, f) => n + f.qty * f.price, 0));
+    if (!preview) for (const f of fills) this.commitLiquidity(stockId, side, f.price, f.qty);
+    return { fills, filledQty, notional, avgPrice: filledQty ? notional / filledQty : 0, exhausted: filledQty < qty };
+  }
 
-    // 2) 档位吃完 → 沿不利方向续档（模拟滑点），严格限定档数与偏离幅度
-    let walked = 0;
-    while (remain > 0 && walked < MAX_WALK_LEVELS) {
-      let np = buy ? snap(lastP + 0.01) : snap(lastP - 0.01);
-      if (buy && np <= lastP) np = snap(lastP + 0.01);
-      if (!buy && np >= lastP) np = snap(lastP - 0.01);
-      if (!allowed(np)) break;
-      if (np > st.limitUp) np = st.limitUp;
-      if (np < st.limitDown) np = st.limitDown;
-      if (!walkOk(np)) break;
-      const t = Math.round(remain);
-      if (t <= 0) break;
-      fills.push({ price: np, qty: t });
-      notional += np * t;
-      filledQty += t;
-      remain = 0;
-      lastP = np;
-      walked++;
-    }
-
-    if (filledQty <= 0) return empty;
-
-    st.flowBudget = Math.max(0, budget - filledQty);
-    const avgPrice = round2(notional / filledQty);
-
-    // 合成盘成交也要计入行情量额与成交明细（否则玩家买到的量在行情里看不到）
-    this._applyVolume(st, avgPrice, filledQty);
+  commitLiquidity(stockId, side, price, qty) {
+    const st = this.S.get(stockId);
+    const levels = st && st.depth && st.depth[side === 'buy' ? 's' : 'b'];
+    const level = levels && levels.find(x => x[0] === price);
+    if (!level || level[1] < qty || st.flowBudget < qty || !(qty > 0)) throw new Error('Synthetic liquidity unavailable');
+    level[1] -= qty;
+    st.flowBudget -= qty;
+    this._applyVolume(st, price, qty);
     if (!st.extTr) st.extTr = [];
-    for (const f of fills) st.extTr.push([snap(f.price), f.qty, buy ? 1 : -1]);
+    st.extTr.push([price, qty, side === 'buy' ? 1 : -1]);
     if (st.extTr.length > 24) st.extTr.splice(0, st.extTr.length - 24);
-
-    this.applyFlow(stockId, buy ? filledQty : -filledQty, side, notional, avgPrice);
+    this.applyFlow(stockId, side === 'buy' ? qty : -qty, side, price * qty, price);
     this._invalidate(stockId);
-    return {
-      fills,
-      filledQty,
-      avgPrice,
-      notional: round2(notional),
-      exhausted: filledQty < wanted0,
-    };
   }
 
   /* ═══════════ 管理端政策事件（只由 server/src/admin.js 调用）═══════════ */

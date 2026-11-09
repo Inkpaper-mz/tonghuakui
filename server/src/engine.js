@@ -271,7 +271,7 @@ class MatchingEngine extends EventEmitter {
     const out = [];
     try {
       if (this.market && typeof this.market.consumeLiquidity === 'function') {
-        const liq = this.market.consumeLiquidity(stockId, side, qty, effLimit);
+        const liq = this.market.consumeLiquidity(stockId, side, qty, effLimit, true);
         const fills = (liq && Array.isArray(liq.fills)) ? liq.fills : [];
         for (let i = 0; i < fills.length; i++) {
           const f = fills[i];
@@ -313,6 +313,7 @@ class MatchingEngine extends EventEmitter {
     const q = Math.min(remainQty, left);
     if (!(q > 0)) return 0;
     const px = restOrder.price;    // 成交价取先挂单方
+    if (!this._canFill(pf, order, px, q) || !this._canFill(restPf, restOrder, px, q)) return null;
     const t1 = this._execute(pf, order, px, q, this._nowTime());
     if (!t1) return null;
     const t2 = this._execute(restPf, restOrder, px, q, this._nowTime());
@@ -331,12 +332,34 @@ class MatchingEngine extends EventEmitter {
     return q;
   }
 
+  _tradable(stockId) {
+    if (this.isTradingOpen && !this.isTradingOpen()) return false;
+    const st = this._state(stockId);
+    return !(st && (st.halted || st.suspended));
+  }
+
+  _fillFee(order, amount) {
+    const before = Number(order.executedAmount) || 0;
+    return util.round2(Math.max(0, this._calcFee(util.round2(before + amount), order.side) - (Number(order.feesPaid) || 0)));
+  }
+
+  _canFill(pf, order, price, qty) {
+    if (!this._tradable(order.stockId) || !(qty > 0) || qty > order.qty - (order.filled || 0)) return false;
+    if (order.side === 'buy') {
+      const amount = util.round2(price * qty);
+      return amount + this._fillFee(order, amount) <= pf.cash + Math.min(pf.frozen, Number(order.frozen) || 0) + 1e-8;
+    }
+    const pos = pf.positions.get(order.stockId);
+    return !!pos && pos.qty >= qty && pos.frozen >= qty && order.frozenShares >= qty;
+  }
+
   /** 记一笔成交（写入 portfolio + 更新委托） */
   _execute(pf, order, price, qty, vtime) {
     if (!pf || !order || !(qty > 0)) return null;
     const px = util.round2(price);
     const amount = util.round2(px * qty);
-    const fee = this._calcFee(amount, order.side);
+    if (!this._canFill(pf, order, px, qty)) return null;
+    const fee = this._fillFee(order, amount);
     let tr = null;
     try {
       tr = pf.applyTrade({
@@ -351,6 +374,8 @@ class MatchingEngine extends EventEmitter {
       });
     } catch (e) { tr = null; }
     if (!tr) return null;
+    order.executedAmount = util.round2((Number(order.executedAmount) || 0) + amount);
+    order.feesPaid = util.round2((Number(order.feesPaid) || 0) + fee);
     const prev = order.filled || 0;
     order.filled = prev + qty;
     order.avgPrice = util.round2(((order.avgPrice || 0) * prev + px * qty) / order.filled);
@@ -390,6 +415,7 @@ class MatchingEngine extends EventEmitter {
         return fail('账户状态异常');
       }
       const reject = (msg) => this._reject(msg, pf.id);   // 拒单同时派发 'rejected' 事件
+      if (this.isTradingOpen && !this.isTradingOpen()) return reject("休市或暂停中，请开市后下单；已有委托可撤销");
       const stockId = req.stockId;
       const side = req.side;
       const type = req.type === 'market' ? 'market' : 'limit';
@@ -418,7 +444,7 @@ class MatchingEngine extends EventEmitter {
       if (!Number.isFinite(qty) || qty <= 0) return reject('委托数量必须大于 0');
       if (qty % lot !== 0) {
         const pos = pf.getPosition(stockId);
-        const oddAll = side === 'sell' && qty < lot && pos.avail > 0 && qty === pos.avail;
+        const oddAll = side === 'sell' && pos.avail > 0 && qty === pos.avail;
         if (!oddAll) return reject(`委托数量必须是 ${lot} 股的整数倍`);
       }
 
@@ -469,6 +495,9 @@ class MatchingEngine extends EventEmitter {
         time: this._nowTime(),
         ts: ++this.seq,
         placedAtTick: this.tick,
+        placedDay: Number(this.market && this.market.dayIndex) || this.lastDay || 0,
+        executedAmount: 0,
+        feesPaid: 0,
         frozen: 0,
         frozenShares: 0,
         reqId: req.reqId || null,
@@ -494,7 +523,7 @@ class MatchingEngine extends EventEmitter {
          · 合成流动性「按需索取」：只要玩家挂单价不劣于合成盘 touch，就先吃玩家挂单；
            只有当玩家盘更差（或没有玩家挂单）时才向 market.consumeLiquidity 要一次流动性。
            这样玩家完全吃得下时不会白要合成流动性，避免虚增冲击与浪费市场 tick 预算。
-         · consumeLiquidity 不扣减自身盘口，所以每笔委托最多索取一次，逐笔从队列里取。
+         · consumeLiquidity 的 preview 模式不扣减盘口，候选成交只预览盘口，实际成交后逐笔扣减并记入行情。
          · 成交价：合成盘用其档位价；玩家盘用先挂单方价格。被动方不调 applyFlow / recordTrade。 */
       const effLimit = type === 'market' ? (side === 'buy' ? limitUp : limitDown) : price;
       const synthTouch = this._synthTouch(stockId, side);
@@ -535,6 +564,7 @@ class MatchingEngine extends EventEmitter {
           const q = Math.min(synth.qty, remainQty);
           const tr = this._execute(pf, order, synth.price, q, this._nowTime());
           if (!tr) break;
+          this.market.commitLiquidity(stockId, side, synth.price, q);
           trades.push(tr);
           synth.qty -= q;
           if (synth.qty <= 0) synthIdx += 1;
@@ -644,8 +674,9 @@ class MatchingEngine extends EventEmitter {
         }
       }
 
-      this._syntheticFlow();
       this._expireOrders();
+      if (this.isTradingOpen && !this.isTradingOpen()) return;
+      this._syntheticFlow();
       this._sweepMarketable();
     } catch (e) { /* 引擎任何异常都不能让进程崩溃 */ }
   }
@@ -662,7 +693,7 @@ class MatchingEngine extends EventEmitter {
     if (!this.book || !this.book.size) return;
     for (const stockId of Array.from(this.book.keys())) {
       const b = this.book.get(stockId);
-      if (!b) continue;
+      if (!b || !this._tradable(stockId)) continue;
       const q = this._quote(stockId);
       if (!q) continue;
       const ask = (q.s && q.s[0] && q.s[0][0]) || 0;
@@ -694,6 +725,7 @@ class MatchingEngine extends EventEmitter {
             if (!(take > 0)) break;
             const tr = this._execute(pf, order, f.price, take, this._nowTime());
             if (!tr) break;
+            this.market.commitLiquidity(stockId, side, f.price, take);
             trades.push(tr); done += take;
             if (APPLY_FLOW_FOR_SYNTHETIC) {
               this._applyFlow(stockId, side === 'buy' ? take : -take, side, util.round2(f.price * take), f.price);
@@ -744,6 +776,7 @@ class MatchingEngine extends EventEmitter {
     for (let i = 0; i < stockIds.length; i++) {
       if (Math.random() >= SYNTHETIC_HIT_P) continue;
       const stockId = stockIds[i];
+      if (!this._tradable(stockId)) continue;
       const book = this.book.get(stockId);
       if (!book) continue;
       const hasBids = book.bids.length > 0;
@@ -799,11 +832,11 @@ class MatchingEngine extends EventEmitter {
   /** 清理超过 1 个虚拟日未成交的挂单（自动撤单并解冻） */
   _expireOrders() {
     if (!this.orders.size) return;
-    const maxAge = this.config.VIRTUAL_DAY_TICKS || FALLBACK_DAY_TICKS;
+
     const dead = [];
     for (const order of this.orders.values()) {
-      const born = Number.isFinite(order.placedAtTick) ? order.placedAtTick : 0;
-      if (this.tick - born > maxAge) dead.push(order);
+      const born = Number.isFinite(order.placedDay) ? order.placedDay : this.lastDay;
+      if (this.lastDay > born) dead.push(order);
     }
     for (let i = 0; i < dead.length; i++) {
       const order = dead[i];
